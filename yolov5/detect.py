@@ -90,6 +90,10 @@ def run(
     if is_url and is_file:
         source = check_file(source)  # download
 
+    #Counter images
+    counter = 0
+    n = 0
+
     # Directories
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
@@ -138,6 +142,16 @@ def run(
         # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
 
         shapes = []
+        data = {'shapes': []}
+        name_json = path.split('\\')
+        name_json = name_json[-1].split('.')
+
+        path_name_json = path.split('\\')
+
+        if os.path.exists(path_annotations + name_json[0] + '.json'):
+            f = open(path_annotations + name_json[0] + '.json')
+            data = json.load(f)
+
         # Process predictions
         for i, det in enumerate(pred):  # per image
             seen += 1
@@ -184,7 +198,10 @@ def run(
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
-                    shapes.append(dict)
+                    if not os.path.exists(path_annotations + name_json[0] + '.json'):
+                        shapes.append(dict)
+                    else:
+                        data['shapes'].append(dict)
 
             # Stream results
             im0 = annotator.result()
@@ -218,27 +235,37 @@ def run(
         # Print time (inference-only)
         LOGGER.info(f'{s}Done. ({t3 - t2:.3f}s)')
 
-        name_json = path.split('\\')
+        counter += int(n)
+        n = 0
 
-        with open(path, "rb") as image_file:
-            data = base64.b64encode(image_file.read())
+        if not os.path.exists(path_annotations + name_json[0] + '.json'):
 
-        x = {
-              "version": "5.0.1",
-              "flags": {},
-              "shapes": shapes,
-              "imagePath": name_json[-1],
-              "imageData": data.decode(),
-              "imageHeight": im0s.shape[0],
-              "imageWidth": im0s.shape[1]
-            }
+            with open(path, "rb") as image_file:
+                data = base64.b64encode(image_file.read())
 
-        name_json = name_json[-1].split('.')
+            x = {
+                  "version": "5.0.1",
+                  "flags": {},
+                  "shapes": shapes,
+                  "imagePath": path_name_json[-1],
+                  "imageData": data.decode(),
+                  "imageHeight": im0s.shape[0],
+                  "imageWidth": im0s.shape[1]
+                }
 
-        with open(path_annotations + name_json[0] + '.json', 'w') as outfile:
-            json.dump(x, outfile)
+            with open(path_annotations + name_json[0] + '.json', 'w') as outfile:
+                json.dump(x, outfile)
 
-        shutil.move(path, path_images)
+            shutil.move(path, path_images)
+        else:
+            with open(path_annotations + name_json[0] + '.json', 'w') as outfile:
+                json.dump(data, outfile)
+
+            shutil.move(path, path_images)
+
+        if counter >= 1000:
+            break
+
 
     # Print results
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
@@ -249,6 +276,7 @@ def run(
     if update:
         strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
 
+    LOGGER.info(counter)
 
 def parse_opt():
     parser = argparse.ArgumentParser()
