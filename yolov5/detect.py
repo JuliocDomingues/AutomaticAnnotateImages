@@ -263,7 +263,7 @@ def run(
 
             shutil.move(path, path_images)
 
-        if counter >= 1000:
+        if counter >= 10000:
             break
 
 

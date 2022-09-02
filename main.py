@@ -5,92 +5,139 @@ from yolov5.detect import run
 from yolov5.model import load_model
 import json
 
-model = load_model(weights=r"C:\Users\estagio.sst17\Downloads\crowdhuman_yolov5m.pt")
+model = load_model(weights=r"C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Models\yolov5x.pt")
 
 
-def test_annotate():
-    f = open(r'C:\Users\estagio.sst17\OneDrive - SESIMS\Área de Trabalho\work_annotate\1-Annotate\scene01721.json')
-    data = json.load(f)
+def test_annotate(path_labelme):
+    from os import walk
 
-    x = {
-        "label": "chair",
-        "points": [
-            [
-                1136.2061855670104,
-                118.23711340206185
-            ],
-            [
-                1272.2886597938145,
-                313.08247422680415
-            ]
-        ],
-        "group_id": None,
-        "shape_type": "rectangle",
-        "flags": {}
-    }
-    data['shapes'].append(x)
-    print(data)
+    for dirpath, dirnames, filenames in walk(path_labelme):
+
+        for filename in filenames:
+            f = open(dirpath + r'\\' + filename)
+            data = json.load(f)
+
+            for i in range(len(data['shapes']) - 1, -1, -1):
+                if data['shapes'][i]['label'] == 'Helmet':
+                    data['shapes'].pop(i)
+
+            # for shape in data['shapes']:
+            #     if shape['label'] == "Helmet":
+            #         idx = data['shapes'].index(shape)
+            #         print(data['shapes'][idx])
+            #         del data['shapes'][idx]
+
+            with open(dirpath + r'\\' + filename, 'w') as outfile:
+                json.dump(data, outfile)
+
+
+def change_name():
+    from os import walk, rename
+    from os.path import exists
+
+    path_images = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Banco2'
+    path_labelme = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Banco2Labelme'
+
+    count = 0
+
+    for dirpath, dirnames, filenames in walk(path_labelme):
+        for filename in filenames:
+            name_split = filename.split('.')
+            name_split[-1] = "jpg"
+            name = '.'.join(name_split)
+
+            if exists(path_images + r"\\" + name):
+                rename(path_images + r"\\" + name, path_images + r"\\image_" + str(count) + r".jpg")
+                rename(path_labelme + r"\\" + filename, path_labelme + r"\\image_" + str(count) + r".json")
+                count += 1
 
 
 # region delete people annotations
 def xml_reader():
-    path_annotations = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Helmet_Mask\annotations'
-    path_images = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Helmet_Mask\images'
+    path_annotations = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Dataset_HardHat_Havard\Hardhat\Test\Annotation'
+    path_images = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Dataset_HardHat_Havard\Hardhat\Test\JPEGImage'
 
     from os import walk, path
     import xmltodict
     from dicttoxml import dicttoxml
 
     for dirpath, dirnames, filenames in walk(path_annotations):
+        count = 0
         for filename in filenames:
             with open(dirpath + r'\\' + filename, 'r', encoding='utf-8') as f:
                 data = f.read()
 
             xml_dict_annotations = xmltodict.parse(data)
             name_image = filename.split('.')
-            name_image = name_image[0] + ".png"
+            name_image = name_image[0] + ".jpg"
             flag = True
+            count2 = 0
 
             if type(xml_dict_annotations['annotation']['object']) == list:
 
                 for name in xml_dict_annotations['annotation']['object']:
-                    if not name['name'] == "with_mask":
+
+                    if name['name'] == "helmet":
+                        count2 += 1
+
+                    if not name['name'] == "helmet":
                         flag = False
-                        #if path.exists(path_images + r'\\' + name_image):
-                            #os.remove(path_images + r'\\' + name_image)
 
-                        #if path.exists(dirpath + r'\\' + filename):
-                            #os.remove(dirpath + r'\\' + filename)
-
-                        print(name_image)
+                        # if path.exists(path_images + r'\\' + name_image):
+                        #     os.remove(path_images + r'\\' + name_image)
+                        #
+                        # if path.exists(dirpath + r'\\' + filename):
+                        #     os.remove(dirpath + r'\\' + filename)
+                        #
+                        # print(name_image)
 
                 if flag:
+                    count += count2
                     shutil.move(path_images + r'\\' + name_image,
-                                r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Helmet_Mask\Mask_images')
+                                r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Dataset_HardHat_Havard\Hardhat\Test\Helmet_images')
 
                     shutil.move(path_annotations + r'\\' + filename,
-                                r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Helmet_Mask\Mask_annotations')
+                                r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Dataset_HardHat_Havard\Hardhat\Test\Helmet_annotations')
 
             elif type(xml_dict_annotations['annotation']['object']) == dict:
 
-                if not xml_dict_annotations['annotation']['object']['name'] == "with_mask":
+                if xml_dict_annotations['annotation']['object']['name'] == "helmet":
+                    count2 += 1
+
+                if not xml_dict_annotations['annotation']['object']['name'] == "helmet":
                     flag = False
 
-                    #if path.exists(dirpath + r'\\' + filename):
-                        #os.remove(path_images + r'\\' + name_image)
-
-                    #if path.exists(path_images + r'\\' + name_image):
-                        #os.remove(dirpath + r'\\' + filename)
-
-                    print(name_image)
+                    # if path.exists(dirpath + r'\\' + filename):
+                    #     os.remove(path_images + r'\\' + name_image)
+                    #
+                    # if path.exists(path_images + r'\\' + name_image):
+                    #     os.remove(dirpath + r'\\' + filename)
+                    #
+                    # print(name_image)
 
                 if flag:
+                    count += count2
                     shutil.move(path_images + r'\\' + name_image,
-                                r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Helmet_Mask\Mask_images')
+                                r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Dataset_HardHat_Havard\Hardhat\Test\Helmet_images')
 
                     shutil.move(path_annotations + r'\\' + filename,
-                                r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Helmet_Mask\Mask_annotations')
+                                r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Dataset_HardHat_Havard\Hardhat\Test\Helmet_annotations')
+            if count > 1000:
+                break
 
+def name_images():
+    from os import walk, rename
+
+    path_images = r'C:\Users\estagio.sst17\source\repos\AutomaticAnnotateImages\Annotations'
+    cont = 0
+
+    for dirpath, dirnames, filenames in walk(path_images):
+        for filename in filenames:
+            new_name_split = filename.split('_')
+            new_name_tmp = new_name_split[-1]
+            new_name = '_' + str(cont) + '.' + str(new_name_tmp.split('.')[-1])
+            rename(dirpath + '\\' + filename, dirpath + '\\' + ("image" + str(new_name)))
+            cont += 1
 
 # endregion
 
@@ -98,8 +145,8 @@ def xml_reader():
 import os
 import argparse
 
-path_images = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Helmet_Mask\Mask_images\\'
-save_dir = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Helmet_Mask\Mask_annotation_labelme\\'
+path_images = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Dataset_HardHat_Havard\Hardhat\Test\Helmet_images\\'
+save_dir = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Dataset_HardHat_Havard\Hardhat\Test\Helmet_Labelme\\'
 
 
 def read_xml_gtbox_and_label(xml_path):
@@ -141,7 +188,7 @@ def df2labelme():
     from os import walk
     from tqdm import tqdm
 
-    path_annotations = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Helmet_Mask\Mask_annotations\\'
+    path_annotations = r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Dataset_HardHat_Havard\Hardhat\Test\Helmet_annotations\\'
 
     for dirpath, dirnames, labels in walk(path_annotations):
         for i, label_abs in tqdm(enumerate(labels), total=len(labels)):
@@ -186,7 +233,7 @@ def df2labelme():
                     shape['flags'] = {}
                     shapes.append(shape)
             json_str['shapes'] = shapes
-            json_str['imagePath'] = label_name + '.png'
+            json_str['imagePath'] = label_name + '.jpg'
             json_str['imageData'] = None
             json_str['imageHeight'] = height
             json_str['imageWidth'] = width
@@ -199,11 +246,11 @@ def df2labelme():
 
 def call_annotate():
     return run(
-        source=r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\Helmet_Mask\Mask_images',
+        source=r'C:\Users\estagio.sst17\OneDrive - SESIMS\Documentos\EPIs\Dataset_HardHat_Havard\Hardhat\Test\Helmet_images',
         model=model,
         save_txt=True,
-        conf_thres=0.65,
-        classes=[1])
+        conf_thres=0.70,
+        classes=[0])
 
 
 if __name__ == '__main__':
